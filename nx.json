@@ -35,7 +35,12 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/links-of-interest-ms-e2e/**/*"]
+      "exclude": [
+        "apps/links-of-interest-ms-e2e/**/*",
+        "apps/advertorials-ms-e2e/**/*",
+        "apps/faqs-ms-e2e/**/*",
+        "apps/chatbot-ms-e2e/**/*"
+      ]
     }
   ]
 }

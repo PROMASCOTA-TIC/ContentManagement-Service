@@ -1,0 +1,26 @@
+{
+  "name": "chatbot-ms",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/chatbot-ms/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "chatbot-ms:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "chatbot-ms:build:development"
+        },
+        "production": {
+          "buildTarget": "chatbot-ms:build:production"
+        }
+      }
+    }
+  }
+}

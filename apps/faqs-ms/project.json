@@ -1,0 +1,26 @@
+{
+  "name": "faqs-ms",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/faqs-ms/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "faqs-ms:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "faqs-ms:build:development"
+        },
+        "production": {
+          "buildTarget": "faqs-ms:build:production"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "advertorials-ms",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/advertorials-ms/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "advertorials-ms:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "advertorials-ms:build:development"
+        },
+        "production": {
+          "buildTarget": "advertorials-ms:build:production"
+        }
+      }
+    }
+  }
+}
