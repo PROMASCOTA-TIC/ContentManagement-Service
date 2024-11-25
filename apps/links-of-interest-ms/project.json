@@ -1,0 +1,26 @@
+{
+  "name": "links-of-interest-ms",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/links-of-interest-ms/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "links-of-interest-ms:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "links-of-interest-ms:build:development"
+        },
+        "production": {
+          "buildTarget": "links-of-interest-ms:build:production"
+        }
+      }
+    }
+  }
+}
