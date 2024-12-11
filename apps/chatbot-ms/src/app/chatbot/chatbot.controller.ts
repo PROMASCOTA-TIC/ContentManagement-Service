@@ -1,12 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './chatbot.service';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ChatbotService } from './chatbot.service';
 
-@Controller()
-export class AppController {
-  constructor(private readonly appService: AppService) {}
+@Controller('chatbot')
+export class ChatbotController {
+  constructor(private readonly chatbotService: ChatbotService) {}
 
-  @Get()
-  getData() {
-    return this.appService.getData();
+  @Get('chat')
+  async getChatResponse(@Query('message') message: string): Promise<string> {
+    if (!message) {
+      throw new Error('The "message" query parameter is required.');
+    }
+    return await this.chatbotService.getChatResponse(message);
   }
 }
