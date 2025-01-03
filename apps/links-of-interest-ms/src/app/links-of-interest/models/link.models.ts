@@ -12,6 +12,16 @@ export class Link extends Model<Link> {
   @Column({
     type: DataType.STRING,
     allowNull: false,
+    validate: {
+      notEmpty: true, // Asegura que no esté vacío
+      isEmail: true,  // Valida que sea un email válido (solo para el campo email)
+    },
+  })
+  ownerEmail: string;  // Correo electrónico del dueño de mascota o emprendedor
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
   })
   title: string; // Título del artículo
 
