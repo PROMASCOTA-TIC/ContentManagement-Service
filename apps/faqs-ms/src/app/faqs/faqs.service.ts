@@ -19,7 +19,7 @@ export class FaqsService {
         private readonly categoryModel: typeof Category,
         @InjectModel(Feedback)
         private readonly feedbackModel: typeof Feedback,
-    ) { }
+    ) {}
 
     /************************************************************************************/
     /** PREGUNTAS FRECUENTES **/
@@ -43,18 +43,18 @@ export class FaqsService {
         return this.faqModel.create(createFaqDto);
     }
 
-    async updateFaq(id: number, updateFaqDto: UpdateFaqDto): Promise<[number, Faq[]]> {
-        return this.faqModel.update(updateFaqDto, { where: { id }, returning: true });
+    async updateFaq(faqId: string, updateFaqDto: UpdateFaqDto): Promise<[number, Faq[]]> {
+        return this.faqModel.update(updateFaqDto, { where: { faqId }, returning: true });
     }
 
-    async deleteFaq(id: number): Promise<number> {
-        return this.faqModel.destroy({ where: { id } });
+    async deleteFaq(faqId: string): Promise<number> {
+        return this.faqModel.destroy({ where: { faqId } });
     }
 
-    async getFaqById(id: number): Promise<Faq> {
-        const faq = await this.faqModel.findByPk(id, { include: [Category] });
+    async getFaqById(faqId: string): Promise<Faq> {
+        const faq = await this.faqModel.findOne({ where: { faqId }, include: [Category] });
         if (!faq) {
-            throw new BadRequestException(`Faq with ID ${id} not found`);
+            throw new BadRequestException(`Faq with ID ${faqId} not found`);
         }
         return faq;
     }
@@ -88,15 +88,17 @@ export class FaqsService {
 
     /************************************************************************************/
     /** FEEDBACK **/
-    async saveFeedback(faqId: number, createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
-        const faq = await this.faqModel.findByPk(faqId);
+
+    async saveFeedback(faqId: string, createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
+        const faq = await this.faqModel.findOne({ where: { faqId } });
         if (!faq) {
             throw new NotFoundException('Pregunta frecuente no encontrada');
         }
 
-        const { response, rating, selectedOptions, additionalComments } = createFeedbackDto;
+        const { feedbackId, response, rating, selectedOptions, additionalComments } = createFeedbackDto;
 
         const feedback = await this.feedbackModel.create({
+            feedbackId,
             faqId,
             response,
             rating,
@@ -118,9 +120,10 @@ export class FaqsService {
 
     /************************************************************************************/
     /** OBTENER FEEDBACK **/
-    async getFeedbackById(feedbackId: number): Promise<{
-        id: number;
-        faqId: number;
+
+    async getFeedbackById(feedbackId: string): Promise<{
+        feedbackId: string;
+        faqId: string;
         response: 'positivo' | 'negativo';
         rating: number;
         selectedOptions: string[];
@@ -128,19 +131,18 @@ export class FaqsService {
         createdAt: Date;
         updatedAt: Date;
     }> {
-        const feedback = await this.feedbackModel.findByPk(feedbackId);
+        const feedback = await this.feedbackModel.findOne({ where: { feedbackId } });
 
         if (!feedback) {
             throw new NotFoundException('Feedback no encontrado');
         }
 
-        // Convertir selectedOptions de cadena a array y crear un objeto plano
         return {
-            id: feedback.id,
+            feedbackId: feedback.feedbackId,
             faqId: feedback.faqId,
             response: feedback.response,
             rating: feedback.rating,
-            selectedOptions: feedback.selectedOptions?.split(',') || [], // Convertir cadena a array
+            selectedOptions: feedback.selectedOptions?.split(',') || [],
             additionalComments: feedback.additionalComments,
             createdAt: feedback.createdAt,
             updatedAt: feedback.updatedAt,
@@ -149,8 +151,9 @@ export class FaqsService {
 
     /************************************************************************************/
     /** OBTENER ESTADÍSTICAS DE FEEDBACK **/
-    async getFeedbackStats(faqId: number): Promise<{ positive: number; negative: number }> {
-        const faq = await this.faqModel.findByPk(faqId);
+
+    async getFeedbackStats(faqId: string): Promise<{ positive: number; negative: number }> {
+        const faq = await this.faqModel.findOne({ where: { faqId } });
         if (!faq) {
             throw new NotFoundException('Pregunta frecuente no encontrada');
         }
@@ -161,31 +164,22 @@ export class FaqsService {
         };
     }
 
-    async getFeedbackSummaryByFaq(faqId: number): Promise<{
-        faqId: number;
+    async getFeedbackSummaryByFaq(faqId: string): Promise<{
+        faqId: string;
         totalVotes: number;
         positiveVotes: number;
         negativeVotes: number;
-        satisfaction: number; // Porcentaje de satisfacción
+        satisfaction: number;
     }> {
-        // Buscar la FAQ para asegurar que existe
-        const faq = await this.faqModel.findByPk(faqId);
+        const faq = await this.faqModel.findOne({ where: { faqId } });
         if (!faq) {
             throw new NotFoundException(`Pregunta frecuente con ID ${faqId} no encontrada`);
         }
 
-        // Contar los votos positivos y negativos para esta FAQ
-        const positiveVotes = await this.feedbackModel.count({
-            where: { faqId, response: 'positivo' },
-        });
-        const negativeVotes = await this.feedbackModel.count({
-            where: { faqId, response: 'negativo' },
-        });
+        const positiveVotes = await this.feedbackModel.count({ where: { faqId, response: 'positivo' } });
+        const negativeVotes = await this.feedbackModel.count({ where: { faqId, response: 'negativo' } });
 
-        // Calcular el total de votos
         const totalVotes = positiveVotes + negativeVotes;
-
-        // Calcular el porcentaje de satisfacción
         const satisfaction = totalVotes > 0 ? (positiveVotes / totalVotes) * 100 : 0;
 
         return {
@@ -197,24 +191,19 @@ export class FaqsService {
         };
     }
 
-    async getFeedbackDetailsByFaq(faqId: number): Promise<{
+    async getFeedbackDetailsByFaq(faqId: string): Promise<{
         vote: 'positivo' | 'negativo';
         rating: number;
-        feedbackOptions: string[]; // Opciones seleccionadas como array
+        feedbackOptions: string[];
         comment: string;
     }[]> {
-        // Buscar la FAQ para asegurar que existe
-        const faq = await this.faqModel.findByPk(faqId);
+        const faq = await this.faqModel.findOne({ where: { faqId } });
         if (!faq) {
             throw new NotFoundException(`Pregunta frecuente con ID ${faqId} no encontrada`);
         }
 
-        // Recuperar los feedbacks relacionados con esta FAQ
-        const feedbacks = await this.feedbackModel.findAll({
-            where: { faqId },
-        });
+        const feedbacks = await this.feedbackModel.findAll({ where: { faqId } });
 
-        // Transformar los datos de feedback
         return feedbacks.map(feedback => ({
             vote: feedback.response,
             rating: feedback.rating,
@@ -222,5 +211,4 @@ export class FaqsService {
             comment: feedback.additionalComments,
         }));
     }
-
 }
