@@ -20,7 +20,8 @@ export class LinksOfInterestService {
   ) { }
 
   /************************************************************************************/
-  // ENLACES DE INTERES
+  /** ENLACES DE INTERÉS **/
+
   // Obtener todos los artículos
   async getAllLinks(): Promise<Link[]> {
     return this.linkModel.findAll({ include: [Category] });
@@ -47,8 +48,8 @@ export class LinksOfInterestService {
   }
 
   // Actualizar un artículo, incluida la fecha de publicación
-  async updateLink(id: number, updateLinkDto: UpdateLinkDto): Promise<Link> {
-    const link = await this.linkModel.findByPk(id);
+  async updateLink(linkId: string, updateLinkDto: UpdateLinkDto): Promise<Link> {
+    const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
@@ -66,20 +67,20 @@ export class LinksOfInterestService {
   }
 
   // Eliminar un artículo
-  async deleteLink(id: number): Promise<number> {
-    return this.linkModel.destroy({ where: { id } });
+  async deleteLink(linkId: string): Promise<number> {
+    return this.linkModel.destroy({ where: { linkId } });
   }
 
-   // Filtrar enlaces por estado
-   async getLinksByStatus(status: string): Promise<Link[]> {
+  // Filtrar enlaces por estado
+  async getLinksByStatus(status: string): Promise<Link[]> {
     return this.linkModel.findAll({
       where: { status },
     });
   }
 
   // Programar la publicación de un artículo
-  async schedulePublication(id: number, publishDate: Date): Promise<string> {
-    const link = await this.linkModel.findByPk(id);
+  async schedulePublication(linkId: string, publishDate: Date): Promise<string> {
+    const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
@@ -99,18 +100,19 @@ export class LinksOfInterestService {
       // Cambiar el estado a 'approved'
       link.status = 'approved';
       await link.save();
-      console.log(`Artículo con ID ${id} publicado automáticamente.`);
+      console.log(`Artículo con linkId ${linkId} publicado automáticamente.`);
     });
 
     // Registrar la tarea en SchedulerRegistry
-    this.schedulerRegistry.addCronJob(`publish-link-${id}`, job);
+    this.schedulerRegistry.addCronJob(`publish-link-${linkId}`, job);
     job.start();
 
-    return `Publicación programada para el artículo con ID ${id} en la fecha ${publishDate}`;
+    return `Publicación programada para el artículo con linkId ${linkId} en la fecha ${publishDate}`;
   }
 
   /************************************************************************************/
-  // CATEGORIAS
+  /** CATEGORIAS **/
+
   // Obtener todas las categorías
   async getAllCategories(): Promise<Category[]> {
     return this.categoryModel.findAll();
@@ -148,12 +150,12 @@ export class LinksOfInterestService {
 
   /************************************************************************************/
   /** APROBAR O RECHAZAR ENLACES **/
+
   // Actualizar el estado de un enlace
-  async updateLinkStatus(id: number, status: 'approved' | 'rejected'): Promise<Link> {
-    // Verificar si el enlace existe
-    const link = await this.linkModel.findByPk(id);
+  async updateLinkStatus(linkId: string, status: 'approved' | 'rejected'): Promise<Link> {
+    const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
-      throw new BadRequestException(`Link with ID ${id} not found`);
+      throw new BadRequestException(`Link with linkId ${linkId} not found`);
     }
 
     // Actualizar el estado
@@ -165,12 +167,35 @@ export class LinksOfInterestService {
 
   /************************************************************************************/
   /** DESCARGAR ENLACES EN PDF **/
-  // Obtener un enlace por su ID
-  async getLinkById(id: number): Promise<Link> {
-    const link = await this.linkModel.findByPk(id, { include: [Category] });
+
+  async getLinkById(linkId: string): Promise<Link> {
+    const link = await this.linkModel.findOne({ where: { linkId }, include: [Category] });
     if (!link) {
-      throw new BadRequestException(`Link with ID ${id} not found`);
+      throw new BadRequestException(`Link with linkId ${linkId} not found`);
     }
     return link;
+  }
+
+  async generatePDFBuffer(link: Link): Promise<Buffer> {
+    const PDFDocument = require('pdfkit');
+    const path = require('path');
+    const doc = new PDFDocument();
+    const buffers: Buffer[] = [];
+
+    const fontsPath = path.join(process.cwd(), 'dist/apps/links-of-interest-ms/assets/fonts');
+    doc.registerFont('Regular', path.join(fontsPath, 'WorkSans-Regular.ttf'));
+    doc.registerFont('Bold', path.join(fontsPath, 'WorkSans-Bold.ttf'));
+
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => Buffer.concat(buffers));
+
+    doc.fontSize(16).font('Bold').text(`Categoría: ${link.category.name}`);
+    doc.fontSize(20).font('Bold').text(link.title);
+    doc.fontSize(16).font('Regular').text(link.description);
+    doc.end();
+
+    return new Promise((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+    });
   }
 }
