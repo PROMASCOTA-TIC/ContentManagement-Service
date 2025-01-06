@@ -3,12 +3,20 @@ import { Faq } from './faqs.models';
 
 @Table({ tableName: 'feedbacks', timestamps: true })
 export class Feedback extends Model<Feedback> {
-  @ForeignKey(() => Faq)
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID, // UUID para ser único
+    defaultValue: DataType.UUIDV4, // Genera automáticamente un UUIDv4
+    primaryKey: true, // Declarar como clave primaria
     allowNull: false,
   })
-  faqId: number;
+  feedbackId: string;
+
+  @ForeignKey(() => Faq)
+  @Column({
+    type: DataType.UUID, // Asegurar que `faqId` sea también UUID si `Faq` usa UUID
+    allowNull: false,
+  })
+  faqId: string;
 
   @BelongsTo(() => Faq)
   faq: Faq;
@@ -26,10 +34,10 @@ export class Feedback extends Model<Feedback> {
   rating: number;
 
   @Column({
-    type: DataType.TEXT, // Cambiar de ARRAY a TEXT
+    type: DataType.TEXT, // Texto delimitado
     allowNull: true,
   })
-  selectedOptions: string; // Almacenar como cadena delimitada
+  selectedOptions: string; // Opciones seleccionadas como cadena delimitada
 
   @Column({
     type: DataType.TEXT,

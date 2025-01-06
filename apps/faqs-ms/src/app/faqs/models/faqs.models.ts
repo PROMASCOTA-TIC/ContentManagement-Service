@@ -5,6 +5,14 @@ import { Feedback } from './feedback.model';
 @Table({ tableName: 'faqs', timestamps: true })
 export class Faq extends Model<Faq> {
   @Column({
+    type: DataType.UUID, // Tipo UUID para ser único
+    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
+    allowNull: false,
+    unique: true,
+  })
+  faqId: string; // Identificador único para el faq
+
+  @Column({
     type: DataType.STRING,
     allowNull: false,
   })

@@ -1,6 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsInt, IsArray } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsInt, IsArray, IsUUID } from 'class-validator';
 
 export class CreateFeedbackDto {
+  @IsUUID()
+  @IsNotEmpty()
+  feedbackId: string; // ID del faq
+
   @IsNotEmpty()
   @IsString()
   response: 'positivo' | 'negativo'; // Respuesta del usuario (obligatorio)
