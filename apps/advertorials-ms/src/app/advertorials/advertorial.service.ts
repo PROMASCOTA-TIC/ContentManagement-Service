@@ -8,7 +8,6 @@ import { CronJob } from 'cron';
 import { Advertorial } from './models/advertorial.models';
 import { CreateAdvertorialDto } from './dto/create-advertorial.dto';
 import { UpdateAdvertorialDto } from './dto/update-advertorial.dto';
-
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -19,10 +18,10 @@ export class AdvertorialsService {
     private readonly schedulerRegistry: SchedulerRegistry,
     @InjectModel(Category)
     private readonly categoryModel: typeof Category,
-  ) { }
+  ) {}
 
   /************************************************************************************/
-  // Publoreportajes
+  // Publireportajes
   // Obtener todos los artículos
   async getAllAdvertorials(): Promise<Advertorial[]> {
     return this.AdvertorialModel.findAll({ include: [Category] });
@@ -53,39 +52,39 @@ export class AdvertorialsService {
   }
 
   // Actualizar un artículo, incluida la fecha de publicación
-  async updateAdvertorial(id: number, UpdateAdvertorialDto: UpdateAdvertorialDto): Promise<Advertorial> {
-    const advertorial = await this.AdvertorialModel.findByPk(id);
+  async updateAdvertorial(advertorialId: string, updateAdvertorialDto: UpdateAdvertorialDto): Promise<Advertorial> {
+    const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
 
     // Validar la fecha de publicación
-    if (UpdateAdvertorialDto.publishDate) {
-      const publishDate = new Date(UpdateAdvertorialDto.publishDate);
+    if (updateAdvertorialDto.publishDate) {
+      const publishDate = new Date(updateAdvertorialDto.publishDate);
       if (isNaN(publishDate.getTime())) {
         throw new BadRequestException('La fecha de publicación no es válida.');
       }
-      UpdateAdvertorialDto.publishDate = publishDate;
+      updateAdvertorialDto.publishDate = publishDate;
     }
 
-    return advertorial.update(UpdateAdvertorialDto);
+    return advertorial.update(updateAdvertorialDto);
   }
 
   // Eliminar un artículo
-  async deleteAdvertorial(id: number): Promise<number> {
-    return this.AdvertorialModel.destroy({ where: { id } });
+  async deleteAdvertorial(advertorialId: string): Promise<number> {
+    return this.AdvertorialModel.destroy({ where: { advertorialId } });
   }
 
-   // Filtrar enlaces por estado
-   async getAdvertorialsByStatus(status: string): Promise<Advertorial[]> {
+  // Filtrar publireportajes por estado
+  async getAdvertorialsByStatus(status: string): Promise<Advertorial[]> {
     return this.AdvertorialModel.findAll({
       where: { status },
     });
   }
 
   // Programar la publicación de un artículo
-  async schedulePublication(id: number, publishDate: Date): Promise<string> {
-    const advertorial = await this.AdvertorialModel.findByPk(id);
+  async schedulePublication(advertorialId: string, publishDate: Date): Promise<string> {
+    const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
@@ -105,14 +104,14 @@ export class AdvertorialsService {
       // Cambiar el estado a 'approved'
       advertorial.status = 'approved';
       await advertorial.save();
-      console.log(`Artículo con ID ${id} publicado automáticamente.`);
+      console.log(`Artículo con ID ${advertorialId} publicado automáticamente.`);
     });
 
     // Registrar la tarea en SchedulerRegistry
-    this.schedulerRegistry.addCronJob(`publish-advertorial-${id}`, job);
+    this.schedulerRegistry.addCronJob(`publish-advertorial-${advertorialId}`, job);
     job.start();
 
-    return `Publicación programada para el artículo con ID ${id} en la fecha ${publishDate}`;
+    return `Publicación programada para el artículo con ID ${advertorialId} en la fecha ${publishDate}`;
   }
 
   /************************************************************************************/
@@ -154,12 +153,11 @@ export class AdvertorialsService {
 
   /************************************************************************************/
   /** APROBAR O RECHAZAR publireportajes **/
-  // Actualizar el estado de un publireportajes
-  async updateAdvertorialStatus(id: number, status: 'approved' | 'rejected'): Promise<Advertorial> {
-    // Verificar si el publireportajes existe
-    const advertorial = await this.AdvertorialModel.findByPk(id);
+  // Actualizar el estado de un publireportaje
+  async updateAdvertorialStatus(advertorialId: string, status: 'approved' | 'rejected'): Promise<Advertorial> {
+    const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
-      throw new BadRequestException(`advertorial with ID ${id} not found`);
+      throw new BadRequestException(`Advertorial with ID ${advertorialId} not found`);
     }
 
     // Actualizar el estado
@@ -170,12 +168,12 @@ export class AdvertorialsService {
   }
 
   /************************************************************************************/
-  // Obtener un publireportajes por su ID
-  async getAdvertorialById(id: number): Promise<Advertorial> {
-    const link = await this.AdvertorialModel.findByPk(id, { include: [Category] });
-    if (!link) {
-      throw new BadRequestException(`Advertorial with ID ${id} not found`);
+  // Obtener un publireportaje por su ID
+  async getAdvertorialById(advertorialId: string): Promise<Advertorial> {
+    const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId }, include: [Category] });
+    if (!advertorial) {
+      throw new BadRequestException(`Advertorial with ID ${advertorialId} not found`);
     }
-    return link;
+    return advertorial;
   }
 }
