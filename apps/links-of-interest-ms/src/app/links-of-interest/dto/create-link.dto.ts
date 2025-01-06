@@ -1,6 +1,10 @@
-import { IsNotEmpty, IsString, IsUrl, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl, IsNumber, IsUUID } from 'class-validator';
 
 export class CreateLinkDto {
+  @IsUUID()
+  @IsNotEmpty()
+  linkId: string; // ID del enlace
+
   @IsNotEmpty()
   @IsString()
   ownerName: string; // Nombre del dueño de mascota o emprendedor
@@ -24,4 +28,8 @@ export class CreateLinkDto {
   @IsNotEmpty()
   @IsUrl()
   sourceLink: string; // Enlace fuente del artículo
+
+  @IsUrl()
+  @IsNotEmpty()
+  itemUrl: string; //Enlace de imagenes
 }

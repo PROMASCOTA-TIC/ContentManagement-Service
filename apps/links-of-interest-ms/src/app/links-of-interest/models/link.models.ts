@@ -4,6 +4,14 @@ import { Category } from './category.model';
 @Table({ tableName: 'links', timestamps: true })
 export class Link extends Model<Link> {
   @Column({
+    type: DataType.UUID, // Tipo UUID para ser único
+    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
+    allowNull: false,
+    unique: true,
+  })
+  linkId: string; // Identificador único para el enlace
+
+  @Column({
     type: DataType.STRING,
     allowNull: false,
   })

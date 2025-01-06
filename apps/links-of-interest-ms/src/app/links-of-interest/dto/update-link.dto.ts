@@ -1,6 +1,10 @@
-import { IsOptional, IsString, IsUrl, IsNumber, IsDate } from 'class-validator';
+import { IsOptional, IsString, IsUrl, IsNumber, IsUUID, IsNotEmpty, IsDate } from 'class-validator';
 
 export class UpdateLinkDto {
+  @IsUUID()
+  @IsNotEmpty()
+  linkId: string; // ID del enlace
+
   @IsOptional()
   @IsNumber()
   categoryId: number; // ID de la categoría asociada
@@ -15,9 +19,13 @@ export class UpdateLinkDto {
 
   @IsOptional()
   @IsUrl()
-  sourceLink?: string; // Enlace fuente del 
+  sourceLink?: string; // Enlace fuente del articulo
   
   @IsOptional()
   @IsDate()
   publishDate?: Date; // Campo para la fecha de publicación
+
+  @IsUrl()
+  @IsNotEmpty()
+  itemUrl: string; //Enlace de imagenes
 }
