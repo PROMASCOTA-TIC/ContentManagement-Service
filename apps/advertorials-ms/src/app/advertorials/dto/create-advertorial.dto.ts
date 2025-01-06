@@ -1,6 +1,10 @@
-import { IsNotEmpty, IsString, IsUrl, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl, IsNumber, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateAdvertorialDto {
+  @IsUUID()
+  @IsNotEmpty()
+  advertorialId: string; // ID del enlace
+
   @IsNotEmpty()
   @IsString()
   ownerName: string; // Nombre del dueño de mascota o emprendedor
@@ -24,4 +28,8 @@ export class CreateAdvertorialDto {
   @IsNotEmpty()
   @IsUrl()
   sourceLink: string; // Enlace fuente del artículo
+
+  @IsUrl()
+  @IsOptional()
+  imagesUrl: string; //Enlace de imagenes
 }

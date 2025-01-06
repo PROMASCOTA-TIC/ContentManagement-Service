@@ -1,6 +1,10 @@
-import { IsOptional, IsString, IsUrl, IsNumber, IsDate } from 'class-validator';
+import { IsOptional, IsString, IsUrl, IsNumber, IsDate, IsUUID, IsNotEmpty } from 'class-validator';
 
 export class UpdateAdvertorialDto {
+  @IsUUID()
+  @IsNotEmpty()
+  advertorialId: string; // ID del enlace
+
   @IsOptional()
   @IsNumber()
   categoryId: number; // ID de la categoría asociada
@@ -16,8 +20,12 @@ export class UpdateAdvertorialDto {
   @IsOptional()
   @IsUrl()
   sourceLink?: string; // Enlace fuente del artículo
-  
+
   @IsOptional()
   @IsDate()
   publishDate?: Date; // Campo para la fecha de publicación
+
+  @IsUrl()
+  @IsOptional()
+  imagesUrl: string; //Enlace de imagenes
 }

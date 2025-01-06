@@ -4,6 +4,14 @@ import { Category } from './category.model';
 @Table({ tableName: 'advertorials', timestamps: true })
 export class Advertorial extends Model<Advertorial> {
   @Column({
+    type: DataType.UUID, // Tipo UUID para ser único
+    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
+    allowNull: false,
+    unique: true,
+  })
+  advertorialId: string; // Identificador único para el publireportaje
+
+  @Column({
     type: DataType.STRING,
     allowNull: false,
   })
@@ -46,7 +54,13 @@ export class Advertorial extends Model<Advertorial> {
     },
   })
   status: string;
-  
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    field: 'ITEMPHOTO',
+  })
+  imagesUrl: string;
 
   // Campo para la fecha y hora de publicación
   @Column({
