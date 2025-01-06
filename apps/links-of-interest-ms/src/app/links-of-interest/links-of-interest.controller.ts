@@ -1,174 +1,156 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, Patch, BadRequestException, Res } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { LinksOfInterestService } from './links-of-interest.service';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { UpdateLinkDto } from './dto/update-link.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
-import { Response } from 'express';
-import PDFDocument from 'pdfkit';
-import path from 'path';
-
-@Controller('links-of-interest')
-export class LinksOfInterestController {
-  constructor(private readonly linksService: LinksOfInterestService) { }
+@Controller()
+export class LinksOfInterestListenerController {
+  constructor(private readonly linksService: LinksOfInterestService) {}
 
   /************************************************************************************/
   /** ENLACES **/
+
   // Obtener todos los artículos
-  @Get('links')
-  getAllLinks() {
+  @MessagePattern('get_all_links')
+  async handleGetAllLinks() {
     return this.linksService.getAllLinks();
   }
 
   // Buscar artículos por título
-  @Get('search')
-  searchLinks(@Query('query') query: string) {
-    return this.linksService.searchLinks(query);
+  @MessagePattern('search_links')
+  async handleSearchLinks(@Payload() data: { query: string }) {
+    return this.linksService.searchLinks(data.query);
   }
 
   // Crear un nuevo artículo
-  @Post('links')
-  createLink(@Body() createLinkDto: CreateLinkDto) {
-    return this.linksService.createLink(createLinkDto);
+  @MessagePattern('create_link')
+  async handleCreateLink(@Payload() data: CreateLinkDto) {
+    if (!data.linkId || !data.ownerName || !data.title || !data.description || !data.sourceLink) {
+      throw new Error('Faltan campos obligatorios en la creación del enlace');
+    }
+    return this.linksService.createLink(data);
   }
 
   // Actualizar un artículo existente
-  @Put('links/:id')
-  async updateLink(
-    @Param('id') id: number,
-    @Body() updateLinkDto: UpdateLinkDto,
-  ) {
-    return this.linksService.updateLink(id, updateLinkDto);
+  @MessagePattern('update_link')
+  async handleUpdateLink(@Payload() data: { linkId: string; updateLinkDto: UpdateLinkDto }) {
+    if (!data.updateLinkDto) {
+      throw new Error('No se proporcionó información para actualizar el enlace');
+    }
+    return this.linksService.updateLink(data.linkId, data.updateLinkDto);
   }
 
   // Eliminar un artículo
-  @Delete('links/:id')
-  deleteLink(@Param('id') id: number) {
-    return this.linksService.deleteLink(id);
+  @MessagePattern('delete_link')
+  async handleDeleteLink(@Payload() data: { linkId: string }) {
+    if (!data.linkId) {
+      throw new Error('ID del enlace no proporcionado');
+    }
+    return this.linksService.deleteLink(data.linkId);
   }
 
   // Actualizar el estado de un enlace
-  @Patch('links/:id/status')
-  async updateLinkStatus(
-    @Param('id') id: number,
-    @Body('status') status: 'approved' | 'rejected',
-  ) {
-    if (!['approved', 'rejected'].includes(status)) {
-      throw new BadRequestException('Invalid status value');
+  @MessagePattern('update_link_status')
+  async handleUpdateLinkStatus(@Payload() data: { linkId: string; status: 'approved' | 'rejected' }) {
+    if (!data.linkId || !['approved', 'rejected'].includes(data.status)) {
+      throw new Error('Parámetros inválidos: debe proporcionarse un linkId y un estado válido ("approved" o "rejected")');
     }
-    return this.linksService.updateLinkStatus(id, status);
+    return this.linksService.updateLinkStatus(data.linkId, data.status);
   }
 
   // Obtener enlaces por estado
-  @Get('links-by-status')
-  async getLinksByStatus(@Query('status') status: string) {
-    if (!status) {
+  @MessagePattern('get_links_by_status')
+  async handleGetLinksByStatus(@Payload() data: { status: string }) {
+    if (!data.status) {
       return { message: 'El parámetro status es obligatorio' };
     }
-
-    if (!['approved', 'pending'].includes(status)) {
+    if (!['approved', 'pending'].includes(data.status)) {
       return { message: 'El parámetro status debe ser "approved" o "pending"' };
     }
-
-    return this.linksService.getLinksByStatus(status);
+    return this.linksService.getLinksByStatus(data.status);
   }
 
-  // Obtener un artículo por ID
-  @Get('links/:id')
-  async getLinkById(@Param('id') id: number) {
-    return this.linksService.getLinkById(id);
+  // Obtener un artículo por linkId
+  @MessagePattern('get_link_by_id')
+  async handleGetLinkById(@Payload() data: { linkId: string }) {
+    if (!data.linkId) {
+      throw new Error('linkId del enlace no proporcionado');
+    }
+    return this.linksService.getLinkById(data.linkId);
   }
 
   // Programar la publicación de un artículo
-  @Post('links/:id/schedule-publication')
-  async schedulePublication(
-    @Param('id') id: number,
-    @Body('publishDate') publishDate: Date,
-  ) {
-    return this.linksService.schedulePublication(id, new Date(publishDate));
+  @MessagePattern('schedule_link_publication')
+  async handleSchedulePublication(@Payload() data: { linkId: string; publishDate: Date }) {
+    if (!data.linkId || !data.publishDate) {
+      throw new Error('Parámetros inválidos: debe proporcionarse un linkId y una fecha de publicación');
+    }
+    return this.linksService.schedulePublication(data.linkId, new Date(data.publishDate));
   }
-
 
   /************************************************************************************/
   /** CATEGORIAS **/
+
   // Obtener todas las categorías
-  @Get('categories')
-  getAllCategories() {
+  @MessagePattern('get_all_categories')
+  async handleGetAllCategories() {
     return this.linksService.getAllCategories();
   }
 
   // Crear una nueva categoría
-  @Post('categories')
-  createCategory(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.linksService.createCategory(createCategoryDto);
+  @MessagePattern('create_category')
+  async handleCreateCategory(@Payload() data: CreateCategoryDto) {
+    if (!data.name) {
+      throw new Error('El nombre de la categoría es obligatorio');
+    }
+    return this.linksService.createCategory(data);
   }
 
   // Actualizar una categoría existente
-  @Put('categories/:id')
-  updateCategory(@Param('id') id: number, @Body() updateCategoryDto: UpdateCategoryDto) {
-    return this.linksService.updateCategory(id, updateCategoryDto);
+  @MessagePattern('update_category')
+  async handleUpdateCategory(@Payload() data: { id: number; updateCategoryDto: UpdateCategoryDto }) {
+    if (!data.id || !data.updateCategoryDto.name) {
+      throw new Error('Debe proporcionarse un ID de categoría y un nombre válido');
+    }
+    return this.linksService.updateCategory(data.id, data.updateCategoryDto);
   }
 
   // Eliminar una categoría
-  @Delete('categories/:id')
-  deleteCategory(@Param('id') id: number) {
-    return this.linksService.deleteCategory(id);
+  @MessagePattern('delete_category')
+  async handleDeleteCategory(@Payload() data: { id: number }) {
+    if (!data.id) {
+      throw new Error('ID de la categoría no proporcionado');
+    }
+    return this.linksService.deleteCategory(data.id);
   }
 
   // Obtener artículos por categoría
-  @Get('categories/:categoryId/links')
-  async getLinksByCategory(@Param('categoryId') categoryId: number) {
-    return this.linksService.getLinksByCategory(categoryId);
+  @MessagePattern('get_links_by_category')
+  async handleGetLinksByCategory(@Payload() data: { categoryId: number }) {
+    if (!data.categoryId) {
+      throw new Error('ID de la categoría no proporcionado');
+    }
+    return this.linksService.getLinksByCategory(data.categoryId);
   }
 
   /************************************************************************************/
   /** DESCARGAR ENLACES EN PDF **/
-  // Descargar artículo como PDF
-  @Get('links/:id/download')
-  async downloadLinkAsPDF(@Param('id') id: number, @Res() res: Response) {
-    // Obtener los datos del artículo
-    const link = await this.linksService.getLinkById(id);
+
+  @MessagePattern('download_link_as_pdf')
+  async handleDownloadLinkAsPDF(@Payload() data: { linkId: string }) {
+    if (!data.linkId) {
+      throw new Error('linkId del enlace no proporcionado');
+    }
+    const link = await this.linksService.getLinkById(data.linkId);
     if (!link) {
-      return res.status(404).json({ message: 'Article not found' });
+      throw new Error('Artículo no encontrado');
     }
 
-    // Configurar el PDF
-    const doc = new PDFDocument();
-
-    // Ruta absoluta a las fuentes después de la compilación
-    const fontsPath = path.join(
-      process.cwd(), // Apunta al directorio raíz del proyecto (dist)
-      'dist/apps/links-of-interest-ms/assets/fonts' // Ruta relativa desde `dist`
-    );
-
-    // Registra las fuentes personalizadas
-    doc.registerFont('Regular', path.join(fontsPath, 'WorkSans-Regular.ttf'));
-    doc.registerFont('Bold', path.join(fontsPath, 'WorkSans-Bold.ttf'));
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${link.title}.pdf`);
-
-    // Agregar contenido al PDF
-    doc.pipe(res); // Enviar el PDF como respuesta
-    doc.fontSize(16).font('Bold').fillColor('#004040').text(`Categoría: ${link.category.name}`, { align: 'left' }); // Nombre de la categoría
-    doc.moveDown();
-    doc.fontSize(20).font('Bold').fillColor('#00AA28').text(link.title, { align: 'center' }); // Título del artículo
-    doc.moveDown();
-    doc.fontSize(16).font('Regular').fillColor('black').text(link.description, { align: 'justify' });
-    doc.moveDown();
-    doc
-      .font('Bold') // Negrilla
-      .text('Compartido por: ', { continued: true }) // Mantiene el texto en la misma línea
-      .font('Regular') // Negrilla
-      .text(link.ownerName); // Sin negrilla
-    doc.moveDown();
-    doc
-      .font('Bold') // Negrilla
-      .text('Fuentes: ', { continued: true }) // Mantiene el texto en la misma línea
-      .font('Regular') // Negrilla
-      .text(link.sourceLink); // Sin negrilla
-
-    doc.end(); // Finalizar el PDF
+    // Crear el PDF como buffer y devolverlo como respuesta
+    const pdfBuffer = await this.linksService.generatePDFBuffer(link);
+    return { filename: `${link.title}.pdf`, pdfBuffer };
   }
 }
