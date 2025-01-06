@@ -27,5 +27,5 @@ export class UpdateLinkDto {
 
   @IsUrl()
   @IsNotEmpty()
-  itemUrl: string; //Enlace de imagenes
+  imagesUrl: string; //Enlace de imagenes
 }

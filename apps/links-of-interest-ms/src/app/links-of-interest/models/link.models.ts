@@ -52,6 +52,13 @@ export class Link extends Model<Link> {
   })
   status: string; // Estado del artículo: 'pending', 'approved', 'rejected'
 
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    field: 'ITEMPHOTO',
+  })
+  imagesUrl: string;
+
   // Campo para la fecha y hora de publicación
   @Column({
     type: DataType.DATE,
