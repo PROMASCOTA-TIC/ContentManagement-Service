@@ -12,5 +12,4 @@ export class UpdateFaqDto {
   @IsOptional()
   @IsString()
   description?: string; // Descripción del artículo
-
 }

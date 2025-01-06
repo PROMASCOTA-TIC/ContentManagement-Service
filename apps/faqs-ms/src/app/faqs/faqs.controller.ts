@@ -1,112 +1,83 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Query,
-  BadRequestException,
-  ParseIntPipe
-} from '@nestjs/common';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { CreateFaqDto } from './dto/create-faq.dto';
-import { UpdateFaqDto } from './dto/update-faq.dto';
-import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FaqsService } from './faqs.service';
 
-@Controller('faqs')
+@Controller()
 export class FaqsController {
-  constructor(private readonly faqsService: FaqsService) { }
+  constructor(private readonly faqsService: FaqsService) {}
 
-  /************************************************************************************/
-  /** PREGUNTAS FRECUENTES **/
-
-  @Get('faqs')
-  getAllFaqs() {
+  @MessagePattern('get_all_faqs')
+  async getAllFaqs() {
     return this.faqsService.getAllFaqs();
   }
 
-  @Get('search')
-  async searchFaqs(@Query('query') query: string) {
-    if (!query || typeof query !== 'string') {
-      throw new BadRequestException('Query parameter must be a valid string');
-    }
-    return this.faqsService.searchFaqs(query);
+  @MessagePattern('search_faqs')
+  async searchFaqs(@Payload() data: { query: string }) {
+    return this.faqsService.searchFaqs(data.query);
   }
 
-  @Post('faqs')
-  createFaq(@Body() createFaqDto: CreateFaqDto) {
-    return this.faqsService.createFaq(createFaqDto);
+  @MessagePattern('create_faq' )
+  async createFaq(@Payload() data: any) {
+    return this.faqsService.createFaq(data);
   }
 
-  @Put('faqs/:id')
-  updateFaq(@Param('id') id: number, @Body() updateFaqDto: UpdateFaqDto) {
-    return this.faqsService.updateFaq(id, updateFaqDto);
+  @MessagePattern('update_faq' )
+  async updateFaq(@Payload() data: { id: number; updateFaqDto: any }) {
+    return this.faqsService.updateFaq(data.id, data.updateFaqDto);
   }
 
-  @Delete('faqs/:id')
-  deleteFaq(@Param('id') id: number) {
-    return this.faqsService.deleteFaq(id);
+  @MessagePattern('delete_faq' )
+  async deleteFaq(@Payload() data: { id: number }) {
+    return this.faqsService.deleteFaq(data.id);
   }
 
-  @Get('faqs/:id')
-  async getFaqById(@Param('id') id: number) {
-    return this.faqsService.getFaqById(id);
+  @MessagePattern('get_faq_by_id')
+  async getFaqById(@Payload() data: { id: number }) {
+    return this.faqsService.getFaqById(data.id);
   }
 
-  /************************************************************************************/
-  /** CATEGORÍAS **/
-
-  @Get('categories')
-  getAllCategories() {
+  @MessagePattern('get_all_categories')
+  async handleGetAllCategories() {
     return this.faqsService.getAllCategories();
   }
 
-  @Post('categories')
-  createCategory(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.faqsService.createCategory(createCategoryDto);
+  @MessagePattern('create_category')
+  async handleCreateCategory(@Payload() data: any) {
+    return this.faqsService.createCategory(data);
   }
 
-  @Put('categories/:id')
-  updateCategory(@Param('id') id: number, @Body() updateCategoryDto: UpdateCategoryDto) {
-    return this.faqsService.updateCategory(id, updateCategoryDto);
+  @MessagePattern('update_category')
+  async handleUpdateCategory(@Payload() data: { id: number; updateCategoryDto: any }) {
+    return this.faqsService.updateCategory(data.id, data.updateCategoryDto);
   }
 
-  @Delete('categories/:id')
-  deleteCategory(@Param('id') id: number) {
-    return this.faqsService.deleteCategory(id);
+  @MessagePattern('delete_category')
+  async handleDeleteCategory(@Payload() data: { id: number }) {
+    return this.faqsService.deleteCategory(data.id);
   }
 
-  @Get('categories/:categoryId/faqs')
-  async getFaqsByCategory(@Param('categoryId') categoryId: number) {
-    return this.faqsService.getFaqsByCategory(categoryId);
+  @MessagePattern('get_faqs_by_category')
+  async handleGetFaqsByCategory(@Payload() data: { categoryId: number }) {
+    return this.faqsService.getFaqsByCategory(data.categoryId);
   }
 
-  /************************************************************************************/
-  /** FEEDBACK **/
-  @Post(':faqId/feedback')
-  async registerFeedback(
-    @Param('faqId') faqId: number,
-    @Body() createFeedbackDto: CreateFeedbackDto,
-  ) {
-    return this.faqsService.saveFeedback(faqId, createFeedbackDto);
+  @MessagePattern('register_feedback')
+  async handleRegisterFeedback(@Payload() data: { faqId: number; createFeedbackDto: any }) {
+    return this.faqsService.saveFeedback(data.faqId, data.createFeedbackDto);
   }
 
-  @Get(':faqId/feedback-stats')
-  async getFeedbackStats(@Param('faqId') faqId: number) {
-    return this.faqsService.getFeedbackStats(faqId);
+  @MessagePattern('get_feedback_stats')
+  async handleGetFeedbackStats(@Payload() data: { faqId: number }) {
+    return this.faqsService.getFeedbackStats(data.faqId);
   }
 
-  @Get(':faqId/feedback-summary')
-  async getFeedbackSummaryByFaq(@Param('faqId', ParseIntPipe) faqId: number) {
-    return this.faqsService.getFeedbackSummaryByFaq(faqId);
+  @MessagePattern('get_feedback_summary')
+  async handleGetFeedbackSummary(@Payload() data: { faqId: number }) {
+    return this.faqsService.getFeedbackSummaryByFaq(data.faqId);
   }
 
-  @Get(':faqId/feedback-details')
-  async getFeedbackDetailsByFaq(@Param('faqId', ParseIntPipe) faqId: number) {
-    return this.faqsService.getFeedbackDetailsByFaq(faqId);
+  @MessagePattern('get_feedback_details')
+  async handleGetFeedbackDetails(@Payload() data: { faqId: number }) {
+    return this.faqsService.getFeedbackDetailsByFaq(data.faqId);
   }
 }
