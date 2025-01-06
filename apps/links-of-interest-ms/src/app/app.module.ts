@@ -4,7 +4,6 @@ import { Dialect } from 'sequelize';
 import { envs } from '../config';
 import { Link } from './links-of-interest/models/link.models';
 import { Category } from './links-of-interest/models/category.model';
-import { LinksOfInterestController } from './links-of-interest/links-of-interest.controller';
 import { LinksOfInterestModule } from './links-of-interest/links-of-interest.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
