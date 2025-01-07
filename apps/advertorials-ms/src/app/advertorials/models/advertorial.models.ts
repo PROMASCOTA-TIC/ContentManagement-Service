@@ -1,15 +1,13 @@
-import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, BelongsTo, ForeignKey, PrimaryKey, Default } from 'sequelize-typescript';
+import { v4 as uuidv4 } from 'uuid'
 import { Category } from './category.model';
 
 @Table({ tableName: 'advertorials', timestamps: true })
 export class Advertorial extends Model<Advertorial> {
-  @Column({
-    type: DataType.UUID, // Tipo UUID para ser único
-    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
-    allowNull: false,
-    unique: true,
-  })
-  advertorialId: string; // Identificador único para el publireportaje
+  @PrimaryKey
+  @Default(uuidv4)  // Genera automáticamente un UUID al crear un registro
+  @Column({ type: DataType.UUID })
+  advertorialId: string;
 
   @Column({
     type: DataType.STRING,

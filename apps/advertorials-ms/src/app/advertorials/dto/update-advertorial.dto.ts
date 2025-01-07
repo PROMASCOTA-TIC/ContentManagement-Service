@@ -1,10 +1,6 @@
 import { IsOptional, IsString, IsUrl, IsNumber, IsDate, IsUUID, IsNotEmpty } from 'class-validator';
 
 export class UpdateAdvertorialDto {
-  @IsUUID()
-  @IsNotEmpty()
-  advertorialId: string; // ID del enlace
-
   @IsOptional()
   @IsNumber()
   categoryId: number; // ID de la categoría asociada

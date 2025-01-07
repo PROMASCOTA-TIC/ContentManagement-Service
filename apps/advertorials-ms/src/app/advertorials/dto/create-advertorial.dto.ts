@@ -1,10 +1,6 @@
 import { IsNotEmpty, IsString, IsUrl, IsNumber, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateAdvertorialDto {
-  @IsUUID()
-  @IsNotEmpty()
-  advertorialId: string; // ID del enlace
-
   @IsNotEmpty()
   @IsString()
   ownerName: string; // Nombre del dueño de mascota o emprendedor

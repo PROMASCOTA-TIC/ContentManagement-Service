@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { BadRequestException, Controller, NotFoundException } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -27,9 +27,15 @@ export class AdvertorialsController {
     return this.advertorialsService.searchAdvertorials(data.query);
   }
 
-  // Crear un nuevo publireportaje
+  // Crear un nuevo artículo
   @MessagePattern('create_advertorial')
   async handleCreateAdvertorial(@Payload() data: CreateAdvertorialDto) {
+    const requiredFields = ['ownerName', 'ownerEmail', 'title', 'description', 'sourceLink'];
+    for (const field of requiredFields) {
+      if (!data[field]) {
+        throw new BadRequestException(`El campo "${field}" es obligatorio`);
+      }
+    }
     return this.advertorialsService.createAdvertorial(data);
   }
 
@@ -38,12 +44,18 @@ export class AdvertorialsController {
   async handleUpdateAdvertorial(
     @Payload() data: { advertorialId: string; updateAdvertorialDto: UpdateAdvertorialDto },
   ) {
+    if (!data?.advertorialId || !data?.updateAdvertorialDto) {
+      throw new BadRequestException('Debe proporcionar un "advertorialId" y los datos de actualización');
+    }
     return this.advertorialsService.updateAdvertorial(data.advertorialId, data.updateAdvertorialDto);
   }
 
   // Eliminar un publireportaje
   @MessagePattern('delete_advertorial')
   async handleDeleteAdvertorial(@Payload() data: { advertorialId: string }) {
+    if (!data?.advertorialId) {
+      throw new BadRequestException('Debe proporcionar el "advertorialId" del enlace a eliminar');
+    }
     return this.advertorialsService.deleteAdvertorial(data.advertorialId);
   }
 
@@ -52,8 +64,8 @@ export class AdvertorialsController {
   async handleUpdateAdvertorialStatus(
     @Payload() data: { advertorialId: string; status: 'approved' | 'rejected' },
   ) {
-    if (!['approved', 'rejected'].includes(data.status)) {
-      throw new Error('Invalid status value');
+    if (!data?.advertorialId || !['approved', 'rejected'].includes(data.status)) {
+      throw new BadRequestException('Debe proporcionar un "advertorialId" válido y un estado válido ("approved" o "rejected")');
     }
     return this.advertorialsService.updateAdvertorialStatus(data.advertorialId, data.status);
   }
@@ -61,34 +73,37 @@ export class AdvertorialsController {
   // Obtener publireportajes por estado
   @MessagePattern('get_advertorials_by_status')
   async handleGetAdvertorialsByStatus(@Payload() data: { status: string }) {
-    if (!data.status) {
-      return { message: 'El parámetro status es obligatorio' };
+    if (!data?.status || !['approved', 'pending'].includes(data.status)) {
+      throw new BadRequestException('Debe proporcionar un estado válido ("approved" o "pending")');
     }
-
-    if (!['approved', 'pending'].includes(data.status)) {
-      return { message: 'El parámetro status debe ser "approved" o "pending"' };
-    }
-
     return this.advertorialsService.getAdvertorialsByStatus(data.status);
   }
 
   // Obtener un publireportaje por advertorialId
   @MessagePattern('get_advertorial_by_id')
   async handleGetAdvertorialById(@Payload() data: { advertorialId: string }) {
-    try {
-      return await this.advertorialsService.getAdvertorialById(data.advertorialId);
-    } catch (error) {
-      throw new Error('No se encontró el publireportaje con el ID proporcionado');
+    if (!data?.advertorialId) {
+      throw new BadRequestException('Debe proporcionar el "advertorialId" del enlace');
     }
+    const advertorial = await this.advertorialsService.getAdvertorialById(data.advertorialId);
+    if (!advertorial) {
+      throw new NotFoundException(`No se encontró el enlace con "advertorialId" ${data.advertorialId}`);
+    }
+    return advertorial;
   }
 
   // Programar la publicación de un publireportaje
   @MessagePattern('schedule_advertorial_publication')
   async handleSchedulePublication(@Payload() data: { advertorialId: string; publishDate: Date }) {
+    if (!data?.advertorialId || !data?.publishDate) {
+      throw new BadRequestException('Debe proporcionar un "advertorialId" y una "publishDate" válidos');
+    }
     return this.advertorialsService.schedulePublication(data.advertorialId, new Date(data.publishDate));
   }
 
   /************************************************************************************/
+  /** CATEGORÍAS **/
+
   /** CATEGORÍAS **/
 
   // Obtener todas las categorías
@@ -100,26 +115,40 @@ export class AdvertorialsController {
   // Crear una nueva categoría
   @MessagePattern('create_category')
   async handleCreateCategory(@Payload() data: CreateCategoryDto) {
+    if (!data?.name) {
+      throw new BadRequestException('El nombre de la categoría es obligatorio');
+    }
     return this.advertorialsService.createCategory(data);
   }
 
   // Actualizar una categoría existente
   @MessagePattern('update_category')
-  async handleUpdateCategory(
-    @Payload() data: { id: number; updateCategoryDto: UpdateCategoryDto },
-  ) {
-    return this.advertorialsService.updateCategory(data.id, data.updateCategoryDto);
+  async handleUpdateCategory(@Payload() data: { id: number; updateCategoryDto: UpdateCategoryDto }) {
+    if (!data?.id || !data?.updateCategoryDto?.name) {
+      throw new BadRequestException('Debe proporcionar un "id" de categoría y un nombre válido');
+    }
+    const result = await this.advertorialsService.updateCategory(data.id, data.updateCategoryDto);
+    if (!result) {
+      throw new NotFoundException(`No se encontró la categoría con id ${data.id}`);
+    }
+    return result;
   }
 
   // Eliminar una categoría
   @MessagePattern('delete_category')
   async handleDeleteCategory(@Payload() data: { id: number }) {
+    if (!data?.id) {
+      throw new BadRequestException('Debe proporcionar el "id" de la categoría a eliminar');
+    }
     return this.advertorialsService.deleteCategory(data.id);
   }
 
-  // Obtener publireportajes por categoría
+  // Obtener artículos por categoría
   @MessagePattern('get_advertorials_by_category')
   async handleGetAdvertorialsByCategory(@Payload() data: { categoryId: number }) {
+    if (!data?.categoryId) {
+      throw new BadRequestException('Debe proporcionar un "categoryId"');
+    }
     return this.advertorialsService.getAdvertorialsByCategory(data.categoryId);
   }
 }

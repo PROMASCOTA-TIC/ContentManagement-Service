@@ -86,7 +86,7 @@ export class AdvertorialsService {
   async schedulePublication(advertorialId: string, publishDate: Date): Promise<string> {
     const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
-      throw new BadRequestException('El artículo no fue encontrado.');
+      throw new BadRequestException('El publireportaje no fue encontrado.');
     }
 
     // Validar si la fecha de publicación es válida
@@ -99,23 +99,32 @@ export class AdvertorialsService {
     advertorial.publishDate = publishDate;
     await advertorial.save();
 
-    // Crear una tarea programada
+    const jobName = `publish-advertorial-${advertorialId}`;
+
+    // Verificar si la tarea ya existe y eliminarla si es necesario
+    if (this.schedulerRegistry.doesExist('cron', jobName)) {
+      console.log(`Eliminando tarea duplicada con el nombre ${jobName}.`);
+      this.schedulerRegistry.deleteCronJob(jobName);
+    }
+
+    // Crear una nueva tarea programada
     const job = new CronJob(publishDate, async () => {
       // Cambiar el estado a 'approved'
       advertorial.status = 'approved';
       await advertorial.save();
-      console.log(`Artículo con ID ${advertorialId} publicado automáticamente.`);
+      console.log(`Artículo con advertorialId ${advertorialId} publicado automáticamente.`);
     });
 
     // Registrar la tarea en SchedulerRegistry
-    this.schedulerRegistry.addCronJob(`publish-advertorial-${advertorialId}`, job);
+    this.schedulerRegistry.addCronJob(jobName, job);
     job.start();
 
-    return `Publicación programada para el artículo con ID ${advertorialId} en la fecha ${publishDate}`;
+    return `Publicación programada para el artículo con advertorialId ${advertorialId} en la fecha ${publishDate}`;
   }
 
   /************************************************************************************/
-  // CATEGORIAS
+  /** CATEGORIAS **/
+
   // Obtener todas las categorías
   async getAllCategories(): Promise<Category[]> {
     return this.categoryModel.findAll();
@@ -127,8 +136,22 @@ export class AdvertorialsService {
   }
 
   // Actualizar una categoría existente
-  async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<[number, Category[]]> {
-    return this.categoryModel.update(updateCategoryDto, { where: { id }, returning: true });
+  async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+    // Realiza la actualización sin `returning: true`
+    const [updatedCount] = await this.categoryModel.update(updateCategoryDto, { where: { id } });
+
+    if (updatedCount === 0) {
+      throw new Error(`No se encontró la categoría con id ${id}`);
+    }
+
+    // Realiza una búsqueda manual para obtener la categoría actualizada
+    const updatedCategory = await this.categoryModel.findOne({ where: { id } });
+
+    if (!updatedCategory) {
+      throw new Error(`No se pudo obtener la categoría actualizada con id ${id}`);
+    }
+
+    return updatedCategory;
   }
 
   // Eliminar una categoría
@@ -136,7 +159,7 @@ export class AdvertorialsService {
     return this.categoryModel.destroy({ where: { id } });
   }
 
-  // Filtrar los publireportajes por categoría
+  // Filtrar los enlaces por categoría
   async getAdvertorialsByCategory(categoryId: number): Promise<Advertorial[]> {
     // Verificar si la categoría existe
     const category = await this.categoryModel.findByPk(categoryId);
@@ -144,7 +167,7 @@ export class AdvertorialsService {
       throw new BadRequestException(`Category with ID ${categoryId} not found`);
     }
 
-    // Buscar los publireportajes relacionados con la categoría
+    // Buscar los enlaces relacionados con la categoría
     return this.AdvertorialModel.findAll({
       where: { categoryId },
       include: [Category],
@@ -152,12 +175,13 @@ export class AdvertorialsService {
   }
 
   /************************************************************************************/
-  /** APROBAR O RECHAZAR publireportajes **/
-  // Actualizar el estado de un publireportaje
+  /** APROBAR O RECHAZAR ENLACES **/
+
+  // Actualizar el estado de un enlace
   async updateAdvertorialStatus(advertorialId: string, status: 'approved' | 'rejected'): Promise<Advertorial> {
     const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
-      throw new BadRequestException(`Advertorial with ID ${advertorialId} not found`);
+      throw new BadRequestException(`Advertorial with advertorialId ${advertorialId} not found`);
     }
 
     // Actualizar el estado
