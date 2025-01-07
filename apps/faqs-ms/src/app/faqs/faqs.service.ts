@@ -7,7 +7,7 @@ import { CreateFaqDto } from './dto/create-faq.dto';
 import { UpdateFaqDto } from './dto/update-faq.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class FaqsService {
         private readonly categoryModel: typeof Category,
         @InjectModel(Feedback)
         private readonly feedbackModel: typeof Feedback,
-    ) {}
+    ) { }
 
     /************************************************************************************/
     /** PREGUNTAS FRECUENTES **/
@@ -29,11 +29,17 @@ export class FaqsService {
     }
 
     async searchFaqs(query: string): Promise<Faq[]> {
-        const escapedQuery = query.replace(/[%_]/g, '\\$&');
+        const escapedQuery = query.replace(/[%_]/g, '\\$&'); // Escapar caracteres especiales
         return this.faqModel.findAll({
-            where: { title: { [Op.like]: `%${escapedQuery}%` } },
+          where: {
+            [Op.and]: [
+              Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), {
+                [Op.like]: `%${escapedQuery.toLowerCase()}%`,
+              }),
+            ],
+          },
         });
-    }
+      }
 
     async createFaq(createFaqDto: CreateFaqDto): Promise<Faq> {
         const category = await this.categoryModel.findByPk(createFaqDto.categoryId);
@@ -43,8 +49,17 @@ export class FaqsService {
         return this.faqModel.create(createFaqDto);
     }
 
-    async updateFaq(faqId: string, updateFaqDto: UpdateFaqDto): Promise<[number, Faq[]]> {
-        return this.faqModel.update(updateFaqDto, { where: { faqId }, returning: true });
+    async updateFaq(faqId: string, updateFaqDto: Partial<UpdateFaqDto>): Promise<Faq> {
+        const faq = await this.faqModel.findOne({ where: { faqId } });
+
+        if (!faq) {
+            throw new BadRequestException(`La FAQ con ID "${faqId}" no fue encontrada.`);
+        }
+
+        // Actualizar solo los campos que estén presentes
+        await faq.update(updateFaqDto);
+
+        return faq;
     }
 
     async deleteFaq(faqId: string): Promise<number> {
@@ -70,22 +85,43 @@ export class FaqsService {
         return this.categoryModel.create(createCategoryDto);
     }
 
-    async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<[number, Category[]]> {
-        return this.categoryModel.update(updateCategoryDto, { where: { id }, returning: true });
+    // Actualizar una categoría existente
+    async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+        // Realiza la actualización sin `returning: true`
+        const [updatedCount] = await this.categoryModel.update(updateCategoryDto, { where: { id } });
+
+        if (updatedCount === 0) {
+            throw new Error(`No se encontró la categoría con id ${id}`);
+        }
+
+        // Realiza una búsqueda manual para obtener la categoría actualizada
+        const updatedCategory = await this.categoryModel.findOne({ where: { id } });
+
+        if (!updatedCategory) {
+            throw new Error(`No se pudo obtener la categoría actualizada con id ${id}`);
+        }
+
+        return updatedCategory;
     }
 
     async deleteCategory(id: number): Promise<number> {
         return this.categoryModel.destroy({ where: { id } });
     }
 
+    // Filtrar los enlaces por categoría
     async getFaqsByCategory(categoryId: number): Promise<Faq[]> {
+        // Verificar si la categoría existe
         const category = await this.categoryModel.findByPk(categoryId);
         if (!category) {
             throw new BadRequestException(`Category with ID ${categoryId} not found`);
         }
-        return this.faqModel.findAll({ where: { categoryId }, include: [Category] });
-    }
 
+        // Buscar los enlaces relacionados con la categoría
+        return this.faqModel.findAll({
+            where: { categoryId },
+            include: [Category],
+        });
+    }
     /************************************************************************************/
     /** FEEDBACK **/
 
@@ -95,10 +131,9 @@ export class FaqsService {
             throw new NotFoundException('Pregunta frecuente no encontrada');
         }
 
-        const { feedbackId, response, rating, selectedOptions, additionalComments } = createFeedbackDto;
+        const { response, rating, selectedOptions, additionalComments } = createFeedbackDto;
 
         const feedback = await this.feedbackModel.create({
-            feedbackId,
             faqId,
             response,
             rating,
