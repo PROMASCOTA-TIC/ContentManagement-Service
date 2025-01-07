@@ -7,7 +7,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Controller()
-export class LinksOfInterestListenerController {
+export class LinksOfInterestController {
   constructor(private readonly linksService: LinksOfInterestService) {}
 
   /************************************************************************************/
