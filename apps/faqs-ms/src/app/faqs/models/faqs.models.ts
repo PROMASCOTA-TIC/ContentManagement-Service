@@ -1,16 +1,14 @@
-import { Table, Column, Model, DataType, BelongsTo, ForeignKey, HasMany } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, BelongsTo, ForeignKey, HasMany, PrimaryKey, Default } from 'sequelize-typescript';
 import { Category } from './category.model';
 import { Feedback } from './feedback.model';
+import { v4 as uuidv4 } from 'uuid';
 
 @Table({ tableName: 'faqs', timestamps: true })
 export class Faq extends Model<Faq> {
-  @Column({
-    type: DataType.UUID, // Tipo UUID para ser único
-    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
-    allowNull: false,
-    unique: true,
-  })
-  faqId: string; // Identificador único para el faq
+  @PrimaryKey
+  @Default(uuidv4)  // Genera automáticamente un UUID al crear un registro
+  @Column({ type: DataType.UUID })
+  faqId: string;
 
   @Column({
     type: DataType.STRING,

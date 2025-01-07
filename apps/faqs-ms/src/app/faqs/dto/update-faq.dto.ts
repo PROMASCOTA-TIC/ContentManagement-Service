@@ -1,10 +1,6 @@
 import { IsOptional, IsString, IsNumber, IsUUID, IsNotEmpty } from 'class-validator';
 
 export class UpdateFaqDto {
-  @IsUUID()
-  @IsNotEmpty()
-  faqId: string;
-
   @IsOptional()
   @IsNumber()
   categoryId: number; // ID de la categoría asociada
