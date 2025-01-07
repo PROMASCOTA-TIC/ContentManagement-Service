@@ -8,6 +8,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
+import PDFDocument from 'pdfkit';
+import * as path from 'path';
 
 @Injectable()
 export class LinksOfInterestService {
@@ -79,6 +81,7 @@ export class LinksOfInterestService {
   }
 
   // Programar la publicación de un artículo
+  // Programar la publicación de un artículo
   async schedulePublication(linkId: string, publishDate: Date): Promise<string> {
     const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
@@ -95,7 +98,15 @@ export class LinksOfInterestService {
     link.publishDate = publishDate;
     await link.save();
 
-    // Crear una tarea programada
+    const jobName = `publish-link-${linkId}`;
+
+    // Verificar si la tarea ya existe y eliminarla si es necesario
+    if (this.schedulerRegistry.doesExist('cron', jobName)) {
+      console.log(`Eliminando tarea duplicada con el nombre ${jobName}.`);
+      this.schedulerRegistry.deleteCronJob(jobName);
+    }
+
+    // Crear una nueva tarea programada
     const job = new CronJob(publishDate, async () => {
       // Cambiar el estado a 'approved'
       link.status = 'approved';
@@ -104,7 +115,7 @@ export class LinksOfInterestService {
     });
 
     // Registrar la tarea en SchedulerRegistry
-    this.schedulerRegistry.addCronJob(`publish-link-${linkId}`, job);
+    this.schedulerRegistry.addCronJob(jobName, job);
     job.start();
 
     return `Publicación programada para el artículo con linkId ${linkId} en la fecha ${publishDate}`;
@@ -124,8 +135,22 @@ export class LinksOfInterestService {
   }
 
   // Actualizar una categoría existente
-  async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<[number, Category[]]> {
-    return this.categoryModel.update(updateCategoryDto, { where: { id }, returning: true });
+  async updateCategory(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+    // Realiza la actualización sin `returning: true`
+    const [updatedCount] = await this.categoryModel.update(updateCategoryDto, { where: { id } });
+
+    if (updatedCount === 0) {
+      throw new Error(`No se encontró la categoría con id ${id}`);
+    }
+
+    // Realiza una búsqueda manual para obtener la categoría actualizada
+    const updatedCategory = await this.categoryModel.findOne({ where: { id } });
+
+    if (!updatedCategory) {
+      throw new Error(`No se pudo obtener la categoría actualizada con id ${id}`);
+    }
+
+    return updatedCategory;
   }
 
   // Eliminar una categoría
@@ -176,26 +201,30 @@ export class LinksOfInterestService {
     return link;
   }
 
-  async generatePDFBuffer(link: Link): Promise<Buffer> {
-    const PDFDocument = require('pdfkit');
-    const path = require('path');
+  // Generar el PDF como Buffer
+  async generatePDF(link: Link): Promise<Buffer> {
     const doc = new PDFDocument();
-    const buffers: Buffer[] = [];
+    const buffers = [];
 
-    const fontsPath = path.join(process.cwd(), 'dist/apps/links-of-interest-ms/assets/fonts');
-    doc.registerFont('Regular', path.join(fontsPath, 'WorkSans-Regular.ttf'));
-    doc.registerFont('Bold', path.join(fontsPath, 'WorkSans-Bold.ttf'));
+    doc.on('data', (chunk) => buffers.push(chunk));
+    doc.on('end', () => { });
 
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', () => Buffer.concat(buffers));
-
-    doc.fontSize(16).font('Bold').text(`Categoría: ${link.category.name}`);
-    doc.fontSize(20).font('Bold').text(link.title);
-    doc.fontSize(16).font('Regular').text(link.description);
+    doc.fontSize(16).font('Helvetica-Bold').fillColor('#004040').text(`Categoría: ${link.category.name}`, { align: 'left' });
+    doc.moveDown();
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#00AA28').text(link.title, { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(16).font('Helvetica').fillColor('black').text(link.description, { align: 'justify' });
+    doc.moveDown();
+    doc.font('Helvetica-Bold').text('Compartido por: ', { continued: true }).font('Helvetica').text(link.ownerName);
+    doc.moveDown();
+    doc.font('Helvetica-Bold').text('Fuentes: ', { continued: true }).font('Helvetica').text(link.sourceLink);
     doc.end();
 
     return new Promise((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('end', () => {
+        resolve(Buffer.concat(buffers));
+      });
     });
   }
+
 }

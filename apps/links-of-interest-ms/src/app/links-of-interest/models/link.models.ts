@@ -1,15 +1,13 @@
-import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, BelongsTo, ForeignKey, PrimaryKey, Default } from 'sequelize-typescript';
+import { v4 as uuidv4 } from 'uuid';
 import { Category } from './category.model';
 
 @Table({ tableName: 'links', timestamps: true })
 export class Link extends Model<Link> {
-  @Column({
-    type: DataType.UUID, // Tipo UUID para ser único
-    defaultValue: DataType.UUIDV4, // Generar automáticamente un UUIDv4
-    allowNull: false,
-    unique: true,
-  })
-  linkId: string; // Identificador único para el enlace
+  @PrimaryKey
+  @Default(uuidv4)  // Genera automáticamente un UUID al crear un registro
+  @Column({ type: DataType.UUID })
+  linkId: string;
 
   @Column({
     type: DataType.STRING,
