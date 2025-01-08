@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUrl, IsNumber, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl, IsNumber, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateLinkDto {
   @IsNotEmpty()
@@ -26,6 +26,6 @@ export class CreateLinkDto {
   sourceLink: string; // Enlace fuente del artículo
 
   @IsUrl()
-  @IsNotEmpty()
+  @IsOptional()
   imagesUrl: string; //Enlace de imagenes
 }

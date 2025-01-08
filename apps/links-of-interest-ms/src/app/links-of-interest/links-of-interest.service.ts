@@ -10,6 +10,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
+import { Op, Sequelize } from 'sequelize';
 
 @Injectable()
 export class LinksOfInterestService {
@@ -31,9 +32,15 @@ export class LinksOfInterestService {
 
   // Buscar artículos por título
   async searchLinks(query: string): Promise<Link[]> {
+    const escapedQuery = query.replace(/[%_]/g, '\\$&'); // Escapar caracteres especiales
     return this.linkModel.findAll({
-      where: { title: { $like: `%${query}%` } },
-      include: [Category],
+      where: {
+        [Op.and]: [
+          Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), {
+            [Op.like]: `%${escapedQuery.toLowerCase()}%`,
+          }),
+        ],
+      },
     });
   }
 
