@@ -9,6 +9,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Op, Sequelize } from 'sequelize';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 
 @Injectable()
 export class FaqsService {
@@ -31,15 +32,15 @@ export class FaqsService {
     async searchFaqs(query: string): Promise<Faq[]> {
         const escapedQuery = query.replace(/[%_]/g, '\\$&'); // Escapar caracteres especiales
         return this.faqModel.findAll({
-          where: {
-            [Op.and]: [
-              Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), {
-                [Op.like]: `%${escapedQuery.toLowerCase()}%`,
-              }),
-            ],
-          },
+            where: {
+                [Op.and]: [
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), {
+                        [Op.like]: `%${escapedQuery.toLowerCase()}%`,
+                    }),
+                ],
+            },
         });
-      }
+    }
 
     async createFaq(createFaqDto: CreateFaqDto): Promise<Faq> {
         const category = await this.categoryModel.findByPk(createFaqDto.categoryId);
@@ -124,32 +125,52 @@ export class FaqsService {
     }
     /************************************************************************************/
     /** FEEDBACK **/
+// Crear feedback
+async createFeedback(faqId: string, dto: CreateFeedbackDto) {
+    const faq = await this.faqModel.findByPk(faqId);
+    if (!faq) {
+      throw new NotFoundException(`FAQ con id ${faqId} no encontrada`);
+    }
 
-    async saveFeedback(faqId: string, createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
-        const faq = await this.faqModel.findOne({ where: { faqId } });
-        if (!faq) {
-            throw new NotFoundException('Pregunta frecuente no encontrada');
+    // Creamos un nuevo feedback
+    const feedback = await this.feedbackModel.create({
+      faqId: faq.faqId,
+      response: dto.response, // 'positivo' o 'negativo'
+      // rating, selectedOptions, etc. si quieres guardarlo desde ya
+    });
+
+    // Incrementar contadores
+    if (dto.response === 'positivo') {
+      faq.positiveFeedback += 1;
+    } else {
+      faq.negativeFeedback += 1;
+    }
+    await faq.save();
+
+    return feedback; // Retorna feedback, incluye feedbackId
+  }
+
+    // Actualizar feedback existente con rating, selectedOptions, etc.
+    async updateFeedback(feedbackId: string, dto: UpdateFeedbackDto) {
+        const feedback = await this.feedbackModel.findByPk(feedbackId);
+        if (!feedback) {
+            throw new NotFoundException(`Feedback con id ${feedbackId} no encontrado`);
         }
 
-        const { response, rating, selectedOptions, additionalComments } = createFeedbackDto;
-
-        const feedback = await this.feedbackModel.create({
-            faqId,
-            response,
-            rating,
-            selectedOptions: selectedOptions?.join(','), // Convertir array a cadena delimitada
-            additionalComments,
-        });
-
-        // Actualizar contadores de feedback en el FAQ
-        if (response === 'positivo') {
-            faq.positiveFeedback = (faq.positiveFeedback || 0) + 1;
-        } else if (response === 'negativo') {
-            faq.negativeFeedback = (faq.negativeFeedback || 0) + 1;
+        // Si guardas selectedOptions como JSON o string, haz la conversión que necesites
+        if (dto.selectedOptions) {
+            feedback.selectedOptions = dto.selectedOptions.join(',');
         }
 
-        await faq.save();
+        if (dto.rating !== undefined) {
+            feedback.rating = dto.rating;
+        }
 
+        if (dto.additionalComments !== undefined) {
+            feedback.additionalComments = dto.additionalComments;
+        }
+
+        await feedback.save();
         return feedback;
     }
 

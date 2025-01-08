@@ -6,10 +6,11 @@ import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { UpdateFaqDto } from './dto/update-faq.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 
 @Controller()
 export class FaqsController {
-  constructor(private readonly faqsService: FaqsService) { }
+  constructor(private readonly faqsService: FaqsService) {}
 
   /************************************************************************************/
   /** PREGUNTAS FRECUENTES **/
@@ -39,22 +40,22 @@ export class FaqsController {
   }
 
   @MessagePattern('update_faq')
-async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFaqDto> }) {
-  const { faqId, updateFaqDto } = data || {};
+  async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFaqDto> }) {
+    const { faqId, updateFaqDto } = data || {};
 
-  // Validar que el `faqId` esté presente
-  if (!faqId) {
-    throw new BadRequestException('Debe proporcionar un "faqId".');
+    // Validar que el `faqId` esté presente
+    if (!faqId) {
+      throw new BadRequestException('Debe proporcionar un "faqId".');
+    }
+
+    // Validar que haya al menos un campo a actualizar
+    if (!updateFaqDto || Object.keys(updateFaqDto).length === 0) {
+      throw new BadRequestException('Debe proporcionar al menos un campo en los datos de actualización.');
+    }
+
+    // Llamada al servicio para actualizar la FAQ
+    return this.faqsService.updateFaq(faqId, updateFaqDto);
   }
-
-  // Validar que haya al menos un campo a actualizar
-  if (!updateFaqDto || Object.keys(updateFaqDto).length === 0) {
-    throw new BadRequestException('Debe proporcionar al menos un campo en los datos de actualización.');
-  }
-
-  // Llamada al servicio para actualizar la FAQ
-  return this.faqsService.updateFaq(faqId, updateFaqDto);
-}
 
   @MessagePattern('delete_faq')
   async deleteFaq(@Payload() data: { faqId: string }) {
@@ -67,11 +68,11 @@ async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFa
   @MessagePattern('get_faq_by_id')
   async getFaqById(@Payload() data: { faqId: string }) {
     if (!data?.faqId) {
-      throw new BadRequestException('Debe proporcionar el "faqId" del enlace');
+      throw new BadRequestException('Debe proporcionar el "faqId"');
     }
     const link = await this.faqsService.getFaqById(data.faqId);
     if (!link) {
-      throw new NotFoundException(`No se encontró el enlace con "faqId" ${data.faqId}`);
+      throw new NotFoundException(`No se encontró la FAQ con "faqId" ${data.faqId}`);
     }
     return link;
   }
@@ -92,29 +93,26 @@ async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFa
     return this.faqsService.createCategory(data);
   }
 
-   // Actualizar una categoría existente
-   @MessagePattern('update_category')
-   async handleUpdateCategory(@Payload() data: { id: number; updateCategoryDto: UpdateCategoryDto }) {
-     if (!data?.id || !data?.updateCategoryDto?.name) {
-       throw new BadRequestException('Debe proporcionar un "id" de categoría y un nombre válido');
-     }
-     const result = await this.faqsService.updateCategory(data.id, data.updateCategoryDto);
-     if (!result) {
-       throw new NotFoundException(`No se encontró la categoría con id ${data.id}`);
-     }
-     return result;
-   }
+  @MessagePattern('update_category')
+  async handleUpdateCategory(@Payload() data: { id: number; updateCategoryDto: UpdateCategoryDto }) {
+    if (!data?.id || !data?.updateCategoryDto?.name) {
+      throw new BadRequestException('Debe proporcionar un "id" de categoría y un nombre válido');
+    }
+    const result = await this.faqsService.updateCategory(data.id, data.updateCategoryDto);
+    if (!result) {
+      throw new NotFoundException(`No se encontró la categoría con id ${data.id}`);
+    }
+    return result;
+  }
 
-   // Eliminar una categoría
-   @MessagePattern('delete_category')
-   async handleDeleteCategory(@Payload() data: { id: number }) {
-     if (!data?.id) {
-       throw new BadRequestException('Debe proporcionar el "id" de la categoría a eliminar');
-     }
-     return this.faqsService.deleteCategory(data.id);
-   }
+  @MessagePattern('delete_category')
+  async handleDeleteCategory(@Payload() data: { id: number }) {
+    if (!data?.id) {
+      throw new BadRequestException('Debe proporcionar el "id" de la categoría a eliminar');
+    }
+    return this.faqsService.deleteCategory(data.id);
+  }
 
-  // Obtener artículos por categoría
   @MessagePattern('get_faqs_by_category')
   async handleGetLinksByCategory(@Payload() data: { categoryId: number }) {
     if (!data?.categoryId) {
@@ -125,10 +123,25 @@ async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFa
 
   /************************************************************************************/
   /** FEEDBACK **/
-
   @MessagePattern('register_feedback')
   async handleRegisterFeedback(@Payload() data: { faqId: string; createFeedbackDto: CreateFeedbackDto }) {
-    return this.faqsService.saveFeedback(data.faqId, data.createFeedbackDto);
+    if (!data?.faqId) {
+      throw new BadRequestException('Debe proporcionar el "faqId"');
+    }
+    return this.faqsService.createFeedback(data.faqId, data.createFeedbackDto);
+  }
+
+  @MessagePattern('update_feedback')
+  async handleUpdateFeedback(@Payload() data: { feedbackId: string; updateFeedbackDto: UpdateFeedbackDto }) {
+    if (!data?.feedbackId) {
+      throw new BadRequestException('Debe proporcionar el "feedbackId".');
+    }
+    // Podríamos validar si data.updateFeedbackDto tiene contenido, etc.
+    const updated = await this.faqsService.updateFeedback(data.feedbackId, data.updateFeedbackDto);
+    if (!updated) {
+      throw new NotFoundException(`No se encontró el feedback con id ${data.feedbackId}`);
+    }
+    return updated;
   }
 
   @MessagePattern('get_feedback_stats')
@@ -149,11 +162,11 @@ async updateFaq(@Payload() data: { faqId: string; updateFaqDto: Partial<UpdateFa
   @MessagePattern('get_feedback_by_id')
   async handleGetFeedbackById(@Payload() data: { feedbackId: string }) {
     if (!data?.feedbackId) {
-      throw new BadRequestException('Debe proporcionar el "feedbackId" del enlace');
+      throw new BadRequestException('Debe proporcionar el "feedbackId"');
     }
     const link = await this.faqsService.getFeedbackById(data.feedbackId);
     if (!link) {
-      throw new NotFoundException(`No se encontró el enlace con "feedbackId" ${data.feedbackId}`);
+      throw new NotFoundException(`No se encontró feedback con "feedbackId" ${data.feedbackId}`);
     }
     return link;
   }
