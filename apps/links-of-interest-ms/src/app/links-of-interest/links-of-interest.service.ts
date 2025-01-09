@@ -56,24 +56,41 @@ export class LinksOfInterestService {
     return this.linkModel.create(createLinkDto);
   }
 
-  // Actualizar un artículo, incluida la fecha de publicación
   async updateLink(linkId: string, updateLinkDto: UpdateLinkDto): Promise<Link> {
+    console.log('Datos recibidos para actualizar:', updateLinkDto);
+
     const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
 
-    // Validar la fecha de publicación
     if (updateLinkDto.publishDate) {
       const publishDate = new Date(updateLinkDto.publishDate);
+      const now = new Date();
+      console.log("Fecha actual (UTC):", now.toISOString());
+      console.log("Fecha de publicación recibida (UTC):", publishDate.toISOString());
+
       if (isNaN(publishDate.getTime())) {
         throw new BadRequestException('La fecha de publicación no es válida.');
       }
-      updateLinkDto.publishDate = publishDate;
+
+      if (publishDate.getTime() <= now.getTime() + 1000) { // margen de 1 segundo
+        throw new BadRequestException('La fecha de publicación debe ser en el futuro.');
+      }
+
+      updateLinkDto.publishDate = publishDate.toISOString(); // Ajustar a ISO string
     }
 
-    return link.update(updateLinkDto);
+    const updatedLinkDto = {
+      ...updateLinkDto,
+      publishDate: updateLinkDto.publishDate ? new Date(updateLinkDto.publishDate) : undefined,
+    };
+
+    const updatedLink = await link.update(updatedLinkDto);
+    console.log(`Artículo con ID ${linkId} actualizado correctamente.`);
+    return updatedLink;
   }
+
 
   // Eliminar un artículo
   async deleteLink(linkId: string): Promise<number> {
@@ -200,13 +217,23 @@ export class LinksOfInterestService {
   /************************************************************************************/
   /** DESCARGAR ENLACES EN PDF **/
 
-  async getLinkById(linkId: string): Promise<Link> {
-    const link = await this.linkModel.findOne({ where: { linkId }, include: [Category] });
-    if (!link) {
-      throw new BadRequestException(`Link with linkId ${linkId} not found`);
+  async getLinkById(linkId: string) {
+    if (!linkId) {
+      throw new BadRequestException('El ID no puede estar vacío');
     }
+
+    const link = await this.linkModel.findOne({
+      where: { linkId },
+      include: [{ model: Category }],
+    });
+
+    if (!link) {
+      throw new BadRequestException(`No se encontró el enlace con el ID ${linkId}`);
+    }
+
     return link;
   }
+
 
   // Generar el PDF como Buffer
   async generatePDF(link: Link): Promise<Buffer> {

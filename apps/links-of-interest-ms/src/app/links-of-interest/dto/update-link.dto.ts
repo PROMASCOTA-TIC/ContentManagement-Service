@@ -1,5 +1,4 @@
-import { IsOptional, IsString, IsUrl, IsNumber, IsUUID, IsNotEmpty, IsDate } from 'class-validator';
-import { IsIn } from 'sequelize-typescript';
+import { IsOptional, IsString, IsUrl, IsNumber, IsUUID, IsNotEmpty, IsDate, IsDateString } from 'class-validator';
 
 export class UpdateLinkDto {
   @IsOptional()
@@ -19,8 +18,8 @@ export class UpdateLinkDto {
   sourceLink?: string; // Enlace fuente del articulo
   
   @IsOptional()
-  @IsDate()
-  publishDate?: Date; // Campo para la fecha de publicación
+  @IsDateString({}, { message: 'La fecha debe estar en formato ISO 8601' })
+  publishDate?: string;
 
   @IsOptional()
   @IsUrl()
