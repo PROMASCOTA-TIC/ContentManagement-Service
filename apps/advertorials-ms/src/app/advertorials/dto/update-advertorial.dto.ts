@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, IsNumber, IsDate, IsUUID, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString, IsUrl, IsNumber, IsDate, IsUUID, IsNotEmpty, IsDateString } from 'class-validator';
 
 export class UpdateAdvertorialDto {
   @IsOptional()
@@ -18,8 +18,8 @@ export class UpdateAdvertorialDto {
   sourceLink?: string; // Enlace fuente del artículo
 
   @IsOptional()
-  @IsDate()
-  publishDate?: Date; // Campo para la fecha de publicación
+  @IsDateString({}, { message: 'La fecha debe estar en formato ISO 8601' })
+  publishDate?: string;
 
   @IsUrl()
   @IsOptional()

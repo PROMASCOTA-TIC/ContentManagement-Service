@@ -18,7 +18,7 @@ export class AdvertorialsService {
     private readonly schedulerRegistry: SchedulerRegistry,
     @InjectModel(Category)
     private readonly categoryModel: typeof Category,
-  ) {}
+  ) { }
 
   /************************************************************************************/
   // Publireportajes
@@ -52,22 +52,71 @@ export class AdvertorialsService {
   }
 
   // Actualizar un artículo, incluida la fecha de publicación
+  // Actualizar un artículo, incluida la fecha de publicación
   async updateAdvertorial(advertorialId: string, updateAdvertorialDto: UpdateAdvertorialDto): Promise<Advertorial> {
+    console.log('Datos recibidos para actualizar:', updateAdvertorialDto);
+
+    // Buscar el enlace por su ID
     const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId } });
     if (!advertorial) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
 
-    // Validar la fecha de publicación
+    // Validar y procesar la fecha de publicación
     if (updateAdvertorialDto.publishDate) {
       const publishDate = new Date(updateAdvertorialDto.publishDate);
+      console.log("Fecha actual (UTC):", new Date().toISOString());
+      console.log("Fecha de publicación recibida:", publishDate.toISOString());
+
+      // Verificar que la fecha sea válida
       if (isNaN(publishDate.getTime())) {
         throw new BadRequestException('La fecha de publicación no es válida.');
       }
-      updateAdvertorialDto.publishDate = publishDate;
+
+      // Verificar que la fecha sea futura
+      const now = new Date();
+      if (publishDate <= now) {
+        throw new BadRequestException('La fecha de publicación debe ser en el futuro.');
+      }
+
+      // Asignar la fecha de publicación al DTO
+      updateAdvertorialDto.publishDate = publishDate.toISOString();
+
+      // Programar la publicación automática
+      const jobName = `publish-advertorial-${advertorialId}`;
+
+      // Si ya existe una tarea programada, eliminarla
+      if (this.schedulerRegistry.doesExist('cron', jobName)) {
+        this.schedulerRegistry.deleteCronJob(jobName);
+        console.log(`Tarea programada "${jobName}" eliminada para evitar duplicados.`);
+      }
+
+      // Crear nueva tarea cron
+      const job = new CronJob(publishDate, async () => {
+        advertorial.status = 'approved'; // Cambiar el estado a "approved"
+        await advertorial.save();
+        console.log(`El artículo con ID ${advertorialId} ha sido publicado automáticamente.`);
+
+        // Eliminar el cron una vez completado
+        this.schedulerRegistry.deleteCronJob(jobName);
+        console.log(`Tarea "${jobName}" eliminada después de completar la publicación.`);
+      });
+
+      // Registrar y ejecutar el cron
+      this.schedulerRegistry.addCronJob(jobName, job);
+      job.start();
+      console.log(`Tarea programada "${jobName}" creada para publicar el artículo.`);
     }
 
-    return advertorial.update(updateAdvertorialDto);
+    // Actualizar los datos del artículo
+    const updatedAdvertorialDto = {
+      ...updateAdvertorialDto,
+      publishDate: updateAdvertorialDto.publishDate ? new Date(updateAdvertorialDto.publishDate) : undefined,
+    };
+    const updatedAdvertorial = await advertorial.update(updatedAdvertorialDto);
+
+    console.log(`Artículo con ID ${advertorialId} actualizado correctamente.`);
+    return updatedAdvertorial;
   }
 
   // Eliminar un artículo
