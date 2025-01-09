@@ -56,41 +56,72 @@ export class LinksOfInterestService {
     return this.linkModel.create(createLinkDto);
   }
 
+  // Actualizar un artículo, incluida la fecha de publicación
   async updateLink(linkId: string, updateLinkDto: UpdateLinkDto): Promise<Link> {
     console.log('Datos recibidos para actualizar:', updateLinkDto);
 
+    // Buscar el enlace por su ID
     const link = await this.linkModel.findOne({ where: { linkId } });
     if (!link) {
       throw new BadRequestException('El artículo no fue encontrado.');
     }
 
+    // Validar y procesar la fecha de publicación
     if (updateLinkDto.publishDate) {
       const publishDate = new Date(updateLinkDto.publishDate);
-      const now = new Date();
-      console.log("Fecha actual (UTC):", now.toISOString());
-      console.log("Fecha de publicación recibida (UTC):", publishDate.toISOString());
+      console.log("Fecha actual (UTC):", new Date().toISOString());
+      console.log("Fecha de publicación recibida:", publishDate.toISOString());
 
+      // Verificar que la fecha sea válida
       if (isNaN(publishDate.getTime())) {
         throw new BadRequestException('La fecha de publicación no es válida.');
       }
 
-      if (publishDate.getTime() <= now.getTime() + 1000) { // margen de 1 segundo
+      // Verificar que la fecha sea futura
+      const now = new Date();
+      if (publishDate <= now) {
         throw new BadRequestException('La fecha de publicación debe ser en el futuro.');
       }
 
-      updateLinkDto.publishDate = publishDate.toISOString(); // Ajustar a ISO string
+      // Asignar la fecha de publicación al DTO
+      updateLinkDto.publishDate = publishDate.toISOString();
+
+      // Programar la publicación automática
+      const jobName = `publish-link-${linkId}`;
+
+      // Si ya existe una tarea programada, eliminarla
+      if (this.schedulerRegistry.doesExist('cron', jobName)) {
+        this.schedulerRegistry.deleteCronJob(jobName);
+        console.log(`Tarea programada "${jobName}" eliminada para evitar duplicados.`);
+      }
+
+      // Crear nueva tarea cron
+      const job = new CronJob(publishDate, async () => {
+        link.status = 'approved'; // Cambiar el estado a "approved"
+        await link.save();
+        console.log(`El artículo con ID ${linkId} ha sido publicado automáticamente.`);
+
+        // Eliminar el cron una vez completado
+        this.schedulerRegistry.deleteCronJob(jobName);
+        console.log(`Tarea "${jobName}" eliminada después de completar la publicación.`);
+      });
+
+      // Registrar y ejecutar el cron
+      this.schedulerRegistry.addCronJob(jobName, job);
+      job.start();
+      console.log(`Tarea programada "${jobName}" creada para publicar el artículo.`);
     }
 
+    // Actualizar los datos del artículo
     const updatedLinkDto = {
       ...updateLinkDto,
       publishDate: updateLinkDto.publishDate ? new Date(updateLinkDto.publishDate) : undefined,
     };
-
     const updatedLink = await link.update(updatedLinkDto);
+
     console.log(`Artículo con ID ${linkId} actualizado correctamente.`);
     return updatedLink;
   }
-
 
   // Eliminar un artículo
   async deleteLink(linkId: string): Promise<number> {
