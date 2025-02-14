@@ -21,30 +21,6 @@
           "buildTarget": "links-of-interest-ms:build:production"
         }
       }
-    },
-    "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/apps/links-of-interest-ms",
-        "main": "apps/links-of-interest-ms/src/main.ts",
-        "tsConfig": "apps/links-of-interest-ms/tsconfig.app.json",
-        "assets": [
-          {
-            "input": "apps/links-of-interest-ms/src/assets",
-            "glob": "**/*",
-            "output": "assets"
-          }
-        ]
-      },
-      "configurations": {
-        "development": {
-          "sourceMap": true
-        },
-        "production": {
-          "sourceMap": false
-        }
-      }
     }
   }
 }
