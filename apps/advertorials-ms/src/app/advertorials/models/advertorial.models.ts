@@ -54,7 +54,7 @@ export class Advertorial extends Model<Advertorial> {
   status: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.TEXT,
     allowNull: true,
     field: 'ITEMPHOTO',
   })

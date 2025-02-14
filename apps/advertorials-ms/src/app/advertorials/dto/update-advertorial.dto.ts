@@ -21,7 +21,7 @@ export class UpdateAdvertorialDto {
   @IsDateString({}, { message: 'La fecha debe estar en formato ISO 8601' })
   publishDate?: string;
 
-  @IsUrl()
   @IsOptional()
+  @IsString()
   imagesUrl: string; //Enlace de imagenes
 }
