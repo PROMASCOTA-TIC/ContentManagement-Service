@@ -51,7 +51,7 @@ export class Link extends Model<Link> {
   status: string; // Estado del artículo: 'pending', 'approved', 'rejected'
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.TEXT,
     allowNull: true,
     field: 'ITEMPHOTO',
   })

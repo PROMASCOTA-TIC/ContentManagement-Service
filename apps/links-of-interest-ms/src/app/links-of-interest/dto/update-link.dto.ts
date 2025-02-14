@@ -22,6 +22,6 @@ export class UpdateLinkDto {
   publishDate?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   imagesUrl: string; //Enlace de imagenes
 }
