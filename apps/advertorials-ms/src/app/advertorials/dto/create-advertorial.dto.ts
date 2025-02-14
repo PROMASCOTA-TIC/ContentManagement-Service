@@ -25,7 +25,7 @@ export class CreateAdvertorialDto {
   @IsUrl()
   sourceLink: string; // Enlace fuente del artículo
 
-  @IsUrl()
   @IsOptional()
+  @IsString()
   imagesUrl: string; //Enlace de imagenes
 }

@@ -47,6 +47,9 @@ export class AdvertorialsService {
       throw new BadRequestException('Invalid categoryId: Category not found');
     }
 
+    // Asegurar que `imagesUrl` sea un string, incluso si es undefined
+    createAdvertorialDto.imagesUrl = createAdvertorialDto.imagesUrl || "";
+
     // Crear el artículo si la categoría existe
     return this.AdvertorialModel.create(createAdvertorialDto);
   }
@@ -242,10 +245,20 @@ export class AdvertorialsService {
 
   /************************************************************************************/
   // Obtener un publireportaje por su ID
-  async getAdvertorialById(advertorialId: string): Promise<Advertorial> {
-    const advertorial = await this.AdvertorialModel.findOne({ where: { advertorialId }, include: [Category] });
+  async getAdvertorialById(advertorialId: string) {
+    console.log("ID recibido en el microservicio:", advertorialId); // 🛠️ Verificar si llega el ID
+
+    if (!advertorialId || advertorialId === "undefined") {
+      throw new BadRequestException('El ID del publireportaje no puede estar vacío');
+    }
+
+    const advertorial = await this.AdvertorialModel.findOne({
+      where: { advertorialId },
+      include: [{ model: Category }]
+    });
+
     if (!advertorial) {
-      throw new BadRequestException(`Advertorial with ID ${advertorialId} not found`);
+      throw new BadRequestException(`Advertorial con ID ${advertorialId} no encontrado`);
     }
     return advertorial;
   }
