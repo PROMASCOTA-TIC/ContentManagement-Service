@@ -52,6 +52,9 @@ export class LinksOfInterestService {
       throw new BadRequestException('Invalid categoryId: Category not found');
     }
 
+    // Asegurar que `imagesUrl` sea un string, incluso si es undefined
+    createLinkDto.imagesUrl = createLinkDto.imagesUrl || "";
+
     // Crear el artículo si la categoría existe
     return this.linkModel.create(createLinkDto);
   }
@@ -264,7 +267,6 @@ export class LinksOfInterestService {
 
     return link;
   }
-
 
   // Generar el PDF como Buffer
   async generatePDF(link: Link): Promise<Buffer> {
